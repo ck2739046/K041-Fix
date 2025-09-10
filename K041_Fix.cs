@@ -146,6 +146,15 @@ namespace default_namespace {
             }
         }
 
+        // 重置开门状态
+        [HarmonyPrefix]
+        [HarmonyPatch(typeof(KaleidxScopeProcess), "OnStart")]
+        public static void KaleidxScope_OnStart_Prefix()
+        {
+            playerHasOpened[0] = false;
+            playerHasOpened[1] = false;
+        }
+
 
 
 
