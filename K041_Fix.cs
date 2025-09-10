@@ -11,7 +11,7 @@ using MAI2.Util;
 using Process;
 
 
-[assembly: MelonInfo(typeof(default_namespace.K041_Fix), "K041_Fix", "1.0.0", "Simon273")]
+[assembly: MelonInfo(typeof(default_namespace.K041_Fix), "K041_Fix", "1.0.1", "Simon273")]
 [assembly: MelonGame("sega-interactive", "Sinmai")]
 
 namespace default_namespace {
@@ -200,21 +200,31 @@ namespace default_namespace {
                 float lineThickness = 10f;
                 float speed = 2.0f;
                 float totalTime = 2.8f;
+                // 曲线
                 var curve = new AnimationCurve(
-                    new Keyframe(0f, 0f),
-                    new Keyframe(0.08f, 1f),
-                    new Keyframe(0.25f, 0.5f),
-                    new Keyframe(0.45f, 0.9f),
-                    new Keyframe(0.65f, 0.4f),
-                    new Keyframe(0.85f, 0.8f),
-                    new Keyframe(1f, 0f)
+                    new Keyframe(0.0f,  0.2f), // Jump 1 peak
+                    new Keyframe(0.02f, 0f),   // Jump 1 drop
+
+                    new Keyframe(0.23f, 0f),
+                    new Keyframe(0.3f,  0.4f), // Jump 2 peak
+                    new Keyframe(0.32f, 0f),   // Jump 2 drop
+
+                    new Keyframe(0.43f, 0f),
+                    new Keyframe(0.52f, 0.6f), // Jump 3 peak
+                    new Keyframe(0.55f, 0f),   // Jump 3 drop
+
+                    new Keyframe(0.74f, 0f),
+                    new Keyframe(0.86f, 0.8f), // Jump 4 peak
+                    new Keyframe(0.92f, 0f),   // Jump 4 drop
+                    
+                    new Keyframe(0.95f,  1.0f)  // Jump 5 peak
                 );
                 // 写入结构，shader直接为null以触发CPU回退
                 fShader?.SetValue(boxed, null);
                 fCurve?.SetValue(boxed, curve);
-                fThick?.SetValue(boxed, 8f);
-                fSpeed?.SetValue(boxed, 2.0f);
-                fTime?.SetValue(boxed, 2.8f);
+                fThick?.SetValue(boxed, lineThickness);
+                fSpeed?.SetValue(boxed, speed);
+                fTime?.SetValue(boxed, totalTime);
                 innerField.SetValue(inst, boxed);
                 fiTable.SetValue(null, inst);
                 if (fiInit != null && !(bool)fiInit.GetValue(null)) fiInit.SetValue(null, true);
