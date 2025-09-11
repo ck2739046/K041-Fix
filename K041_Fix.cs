@@ -300,6 +300,25 @@ namespace default_namespace {
             Graphics.DrawTexture(dstRect, src, srcRect, 0, 0, 0, 0);
         }
         
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        
         // 检测是不是里KaleidxScope
         private static bool _isLastEvent = false;
         [HarmonyPostfix]
