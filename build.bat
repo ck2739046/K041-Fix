@@ -10,6 +10,7 @@ dotnet build -c Release
 
 if exist "bin\Release\net472\K041_Fix.dll" (
     copy "bin\Release\net472\K041_Fix.dll" "."
+    exit
 ) else (
     pause
 )

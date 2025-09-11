@@ -287,6 +287,7 @@ namespace default_namespace {
         [HarmonyPatch(typeof(GlitchNoiseEffect), "OnRenderImage")]
         private static bool GlitchNoiseEffect_OnRenderImage_Prefix(GlitchNoiseEffect __instance, RenderTexture source, RenderTexture destination)
         {
+            if (!_isPatchEnabled) return true; // 未启用patch
             if (!_cpuStripeFallback.Contains(__instance)) return true; // 非回退实例
             var trav = Traverse.Create(__instance);
             bool active = trav.Field("_isActive").GetValue<bool>();
