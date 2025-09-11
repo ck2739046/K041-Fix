@@ -85,7 +85,7 @@ namespace default_namespace {
                 var stateMachine = procTrav.Field("stateMachine").GetValue<KaleidxScopeState>();
                 if (stateMachine == null)
                 {
-                    MelonLogger.Msg("[LastBossKeySim-Process] stateMachine is null.");
+                    MelonLogger.Msg("[Gate10_KeySim] stateMachine is null.");
                     return;
                 }
                 // 拿到 monitors
@@ -93,7 +93,7 @@ namespace default_namespace {
                 var monitors = smTrav.Field("monitorList").GetValue() as System.Collections.IList;
                 if (monitors == null)
                 {
-                    MelonLogger.Msg("[LastBossKeySim-Process] monitors is null.");
+                    MelonLogger.Msg("[Gate10_KeySim] monitors is null.");
                     return;
                 }
                 // 判断触发开门
@@ -118,7 +118,7 @@ namespace default_namespace {
             }
             catch (Exception ex)
             {
-                MelonLogger.Error($"[LastBossKeySim-Process] 异常: {ex}");
+                MelonLogger.Error($"[Gate10_KeySim] error: {ex}");
             }
         }
 
@@ -136,13 +136,13 @@ namespace default_namespace {
                 var changeStateMethod = typeof(StateMachineBase<,>).MakeGenericType(typeof(KaleidxScopeState), typeof(KaleidxScopeState.StateType))
                     .GetMethod("ChangeState", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
                 changeStateMethod.Invoke(stateMachine, new object[] { newState });
-                MelonLogger.Msg($"[LastBossKeySim-Process] P{playerIndex} 成功开门");
+                MelonLogger.Msg($"[Gate10_KeySim] P{playerIndex+1} open Gate 10.");
                 playerHasOpened[playerIndex] = true;
                 return true;
             }
             catch (Exception e)
             {
-                MelonLogger.Error($"[LastBossKeySim-Process] P{playerIndex} 触发开门异常: {e}");
+                MelonLogger.Error($"[Gate10_KeySim] P{playerIndex+1} open gate error: {e}");
                 return false;
             }
         }
@@ -174,6 +174,8 @@ namespace default_namespace {
         }    
 
         private static bool _simpleSefDone;
+        private static bool _isPatchEnabled;
+        
         private static void EnsureSimpleSpecialEffectParamTable()
         {
             if (_simpleSefDone) return;
@@ -183,6 +185,25 @@ namespace default_namespace {
                 var tableType = AccessTools.TypeByName("SpecialEffectParamTable");
                 var innerType = AccessTools.TypeByName("SpecialEffectParamTable+KaleidGlitchNoise_BlackOut");
                 if (commonType == null || tableType == null || innerType == null) return;
+
+                // 如果资源存在则不使用此patch
+                try
+                {
+                    var getMethod = commonType.GetMethod("GetSpecialEffectParamTable", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static);
+                    if (getMethod != null)
+                    {
+                        var loaded = getMethod.Invoke(null, null);
+                        if (loaded != null)
+                        {
+                            _isPatchEnabled = false;
+                            _simpleSefDone = true;
+                            return;
+                        }
+                    }
+                }
+                catch { /* ignore and fallback */ }
+
+
                 var fiTable = commonType.GetField("_specialEffectParamTable", BindingFlags.NonPublic | BindingFlags.Static);
                 if (fiTable == null) return;
                 if (fiTable.GetValue(null) != null) { _simpleSefDone = true; return; }
@@ -192,35 +213,17 @@ namespace default_namespace {
                 var inst = ScriptableObject.CreateInstance(tableType);
                 var boxed = Activator.CreateInstance(innerType);
                 // 字段引用
-                var fShader = innerType.GetField("_angleGlitchShader");
-                var fCurve = innerType.GetField("_noiseCurvce");
-                var fThick = innerType.GetField("_lineThickness");
-                var fSpeed = innerType.GetField("_speed");
-                var fTime = innerType.GetField("_totalTime");
-                // 固定常量
+                var fShader = innerType.GetField("_angleGlitchShader", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+                var fCurve = innerType.GetField("_noiseCurvce", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+                var fThick = innerType.GetField("_lineThickness", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+                var fSpeed = innerType.GetField("_speed", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+                var fTime = innerType.GetField("_totalTime", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+
                 float lineThickness = 10f;
-                float speed = 2.0f;
-                float totalTime = 2.8f;
-                // 曲线
-                var curve = new AnimationCurve(
-                    new Keyframe(0.0f,  0.2f), // Jump 1 peak
-                    new Keyframe(0.02f, 0f),   // Jump 1 drop
+                float speed = 5f;
+                float totalTime = 4f;
+                var curve = BuildCurve();
 
-                    new Keyframe(0.23f, 0f),
-                    new Keyframe(0.3f,  0.4f), // Jump 2 peak
-                    new Keyframe(0.32f, 0f),   // Jump 2 drop
-
-                    new Keyframe(0.43f, 0f),
-                    new Keyframe(0.52f, 0.6f), // Jump 3 peak
-                    new Keyframe(0.55f, 0f),   // Jump 3 drop
-
-                    new Keyframe(0.74f, 0f),
-                    new Keyframe(0.86f, 0.8f), // Jump 4 peak
-                    new Keyframe(0.92f, 0f),   // Jump 4 drop
-                    
-                    new Keyframe(0.95f,  1.0f)  // Jump 5 peak
-                );
-                // 写入结构，shader直接为null以触发CPU回退
                 fShader?.SetValue(boxed, null);
                 fCurve?.SetValue(boxed, curve);
                 fThick?.SetValue(boxed, lineThickness);
@@ -229,12 +232,38 @@ namespace default_namespace {
                 innerField.SetValue(inst, boxed);
                 fiTable.SetValue(null, inst);
                 if (fiInit != null && !(bool)fiInit.GetValue(null)) fiInit.SetValue(null, true);
+
+                MelonLogger.Msg("[BlueScreenEffect] SpecialEffectParamTable not exist, use custom fallback.");
+                _isPatchEnabled = true;
                 _simpleSefDone = true;
             }
             catch (Exception ex)
             {
                 MelonLogger.Error($"[SEF Simple] Create failed: {ex}");
             }
+        }
+
+        // glitch 曲线
+        private static AnimationCurve BuildCurve()
+        {
+            var keys = new Keyframe[]
+            {
+                new Keyframe(0.00f, 0.0f, 0f, 0f),
+                new Keyframe(0.05f, 0.2f, 0f, 0f),
+                new Keyframe(0.24f, 0.0f, 0f, 0f),
+                new Keyframe(0.34f, 0.0f, 0f, 0f),
+                new Keyframe(0.53f, 0.2f, 0f, 0f),
+                new Keyframe(0.73f, 0.4f, 0f, 0f),
+                new Keyframe(0.84f, 0.0f, 0.5f, 0.5f),
+                new Keyframe(0.94f, 0.7f, 0f, 0f),
+                new Keyframe(1.00f, 0.9f, 0f, 0f)
+            };
+            var curve = new AnimationCurve(keys)
+            {
+                preWrapMode = WrapMode.ClampForever,
+                postWrapMode = WrapMode.ClampForever
+            };
+            return curve;
         }
 
         // 仿 glitch 效果
@@ -244,11 +273,12 @@ namespace default_namespace {
         [HarmonyPatch(typeof(GlitchNoiseEffect), "Initialize")]
         private static bool GlitchNoiseEffect_Initialize_Prefix(GlitchNoiseEffect __instance, Shader shader, float lineThickness, float speed)
         {
-            if (shader != null) return true; // 有 shader 正常执行
+            if (!_isPatchEnabled) return true; // 未启用patch
+            if (shader != null) return true;   // 有 shader 正常执行
             var trav = Traverse.Create(__instance);
             trav.Field("_lineThickness").SetValue(lineThickness);
             trav.Field("_speed").SetValue(speed);
-            __instance.enabled = true;
+            __instance.enabled = true; // 保持脚本启用
             _cpuStripeFallback.Add(__instance);
             return false;
         }
@@ -295,8 +325,8 @@ namespace default_namespace {
         {
             if (offset <= -w || offset >= w) return; // 全部在外不绘制
             var dstRect = new Rect(offset, y, w, sh);
-            // 同时翻转X和Y轴，保持画面正确
-            var srcRect = new Rect(1f, 1f - (y + sh) / (float)h, -1f, sh / (float)h);
+            // 翻转Y轴，保持画面正确
+            var srcRect = new Rect(0f, 1f - (y + sh) / (float)h, 1f, sh / (float)h);
             Graphics.DrawTexture(dstRect, src, srcRect, 0, 0, 0, 0);
         }
         
@@ -318,7 +348,7 @@ namespace default_namespace {
 
 
 
-        
+
         // 检测是不是里KaleidxScope
         private static bool _isLastEvent = false;
         [HarmonyPostfix]
