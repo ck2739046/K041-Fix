@@ -10,6 +10,7 @@ using System.Linq;
 using MAI2.Util;
 using Process;
 using Process.Entry;
+using Process.UserDataNet.State.UserDataULState;
 
 
 [assembly: MelonInfo(typeof(default_namespace.K041_Fix), "K041_Fix", "1.1.0", "Simon273")]
@@ -370,9 +371,9 @@ namespace default_namespace {
         }
         
         // 重置状态
-        [HarmonyPrefix]
-        [HarmonyPatch(typeof(ResultProcess), "OnStart")]
-        public static void ResultProcess_OnStart_Prefix(ResultProcess __instance)
+        [HarmonyPostfix]
+        [HarmonyPatch(typeof(StateULUserAime), "Init")]
+        public static void StateULUserAime_Init_Postfix(StateULUserAime __instance)
         {
             if (_isLastEvent) _isLastEvent = false;
         }
