@@ -12,7 +12,7 @@ using Process;
 using Process.Entry;
 
 
-[assembly: MelonInfo(typeof(default_namespace.K041_Fix), "K041_Fix", "1.0.1", "Simon273")]
+[assembly: MelonInfo(typeof(default_namespace.K041_Fix), "K041_Fix", "1.1.0", "Simon273")]
 [assembly: MelonGame("sega-interactive", "Sinmai")]
 
 namespace default_namespace {
@@ -218,12 +218,12 @@ namespace default_namespace {
                 var fThick = innerType.GetField("_lineThickness", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
                 var fSpeed = innerType.GetField("_speed", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
                 var fTime = innerType.GetField("_totalTime", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
-
+                // 定义参数
                 float lineThickness = 10f;
                 float speed = 5f;
                 float totalTime = 4f;
                 var curve = BuildCurve();
-
+                // 写入字段
                 fShader?.SetValue(boxed, null);
                 fCurve?.SetValue(boxed, curve);
                 fThick?.SetValue(boxed, lineThickness);
