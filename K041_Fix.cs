@@ -9,6 +9,7 @@ using Manager;
 using System.Linq;
 using MAI2.Util;
 using Process;
+using Process.Entry;
 
 
 [assembly: MelonInfo(typeof(default_namespace.K041_Fix), "K041_Fix", "1.0.1", "Simon273")]
@@ -145,7 +146,7 @@ namespace default_namespace {
                 return false;
             }
         }
-
+        
         // 重置开门状态
         [HarmonyPrefix]
         [HarmonyPatch(typeof(KaleidxScopeProcess), "OnStart")]
@@ -297,6 +298,34 @@ namespace default_namespace {
             // 同时翻转X和Y轴，保持画面正确
             var srcRect = new Rect(1f, 1f - (y + sh) / (float)h, -1f, sh / (float)h);
             Graphics.DrawTexture(dstRect, src, srcRect, 0, 0, 0, 0);
+        }
+        
+        // 检测是不是里KaleidxScope
+        private static bool _isLastEvent = false;
+        [HarmonyPostfix]
+        [HarmonyPatch(typeof(KaleidxScopeState.ConfirmWindow), "PlayGateConfirmAnim")]
+        public static void KaleidxScopeState_ConvertPositionIdToGateIndex_Postfix(KaleidxScopeState.ConfirmWindow __instance, int gateId)
+        {
+            if (gateId == 10)
+            {
+                _isLastEvent = true;
+            }
+        }
+        
+        // 修改maxTrack显示值
+        [HarmonyPostfix]
+        [HarmonyPatch(typeof(GameManager), "GetMaxTrackCount")]
+        public static int GameManager_GetMaxTrackCount_Postfix(int __result)
+        {
+            return _isLastEvent ? 1 : __result;
+        }
+        
+        // 重置状态
+        [HarmonyPrefix]
+        [HarmonyPatch(typeof(ResultProcess), "OnStart")]
+        public static void ResultProcess_OnStart_Prefix(ResultProcess __instance)
+        {
+            if (_isLastEvent) _isLastEvent = false;
         }
     }
 }
