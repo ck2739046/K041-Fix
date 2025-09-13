@@ -13,7 +13,7 @@ using Process.Entry;
 using Process.UserDataNet.State.UserDataULState;
 
 
-[assembly: MelonInfo(typeof(default_namespace.K041_Fix), "K041_Fix", "1.1.0", "Simon273")]
+[assembly: MelonInfo(typeof(default_namespace.K041_Fix), "K041_Fix", "1.2.0", "Simon273")]
 [assembly: MelonGame("sega-interactive", "Sinmai")]
 
 namespace default_namespace {
