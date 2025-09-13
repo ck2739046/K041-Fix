@@ -19,9 +19,14 @@ using Process.UserDataNet.State.UserDataULState;
 namespace default_namespace {
     public class K041_Fix : MelonMod
     {
+        // Dedicated Harmony instance to allow patching from static contexts
+        private static HarmonyLib.Harmony _harmony;
         public override void OnInitializeMelon()
         {
-            HarmonyInstance.PatchAll(typeof(K041_Fix));
+            // Bind our Harmony instance
+            _harmony = this.HarmonyInstance ?? new HarmonyLib.Harmony("K041_Fix");
+            // Apply attribute-based patches in this class
+            _harmony.PatchAll(typeof(K041_Fix));
         }
 
 
@@ -50,6 +55,71 @@ namespace default_namespace {
 
 
 
+
+
+
+
+
+
+        // patch AquaMai.Mods.Fix.FixLevelDisplay.FixLevelShiftMusicChainCardObejct
+        private static bool _aquamaiPatched = false;
+        private static void TryPatchAquaMaiFixLevelDisplay()
+        {
+            try
+            {
+                if (_aquamaiPatched) return;
+                var AquaMai_fixType = AccessTools.TypeByName("AquaMai.Mods.Fix.FixLevelDisplay");
+                if (AquaMai_fixType == null)
+                {
+                    MelonLogger.Msg("AquaMai.FixLevelDisplay not found or not enabled, skip patching.");
+                    return;
+                }
+
+                var target = AccessTools.Method(AquaMai_fixType, "FixLevelShiftMusicChainCardObejct");
+                if (target == null)
+                {
+                    MelonLogger.Msg("AquaMai.FixLevelDisplay.FixLevelShiftMusicChainCardObejct not found or not enabled, skip patching.");
+                    return;
+                }
+
+                var prefix = new HarmonyMethod(AccessTools.Method(typeof(K041_Fix), nameof(BlockAquaMai_FixLevelDisplay_Prefix)));
+                if (_harmony == null) _harmony = new HarmonyLib.Harmony("K041_Fix.Runtime");
+                _harmony.Patch(target, prefix: prefix);
+                MelonLogger.Msg("Applied selective disable for AquaMai.FixLevelDisplay (KLD 表/里).");
+                _aquamaiPatched = true;
+            }
+            catch (Exception ex)
+            {
+                MelonLogger.Error($"Failed to patch AquaMai.FixLevelDisplay: {ex}");
+            }
+        }
+
+        // prefix 禁用 AquaMai.FixLevelDisplay
+        private static bool BlockAquaMai_FixLevelDisplay_Prefix()
+        {
+            if (!GameManager.IsKaleidxScopeMode) return true;
+            if (!_shouldBlock) return true;
+            return false;
+        }
+
+        // 在玩家确认进入门后，获取门的 id
+        private static bool _shouldBlock = false;
+        [HarmonyPostfix]
+        [HarmonyPatch(typeof(KaleidxScopeState.TimeUp), "OnEnter")]
+        public static void KaleidxScope_TimeUp_OnEnter_Postfix(KaleidxScopeState.TimeUp __instance)
+        {
+            int id = Singleton<KaleidxScopeManager>.Instance.gateId;
+
+            if (id == 8 || id == 10)
+                _shouldBlock = true;
+            else
+                _shouldBlock = false;
+
+            if (id == 8)
+                MelonLogger.Msg($"AquaMai.FixLevelDisplay will be disabled in KLD 表");
+            if (id == 10)
+                MelonLogger.Msg($"AquaMai.FixLevelDisplay will be disabled in KLD 里");
+        }
 
 
 
@@ -172,6 +242,7 @@ namespace default_namespace {
         public static void CommonProcess_OnStart_Postfix(PowerOnMonitor[] ____monitors)
         {
             EnsureSimpleSpecialEffectParamTable();
+            TryPatchAquaMaiFixLevelDisplay();
         }    
 
         private static bool _simpleSefDone;
