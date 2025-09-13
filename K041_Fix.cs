@@ -128,6 +128,42 @@ namespace default_namespace {
 
 
 
+        // Remove 1879 from the Normal notes list
+        [HarmonyPostfix]
+        [HarmonyPatch(typeof(NotesListManager), "CreateNormalNotesList")]
+        public static void CreateNormalNotesList_Postfix()
+        {
+            try
+            {
+                if (!GameManager.IsNormalMode) return; // 仅在 Normal 模式下生效
+
+                var dm = DataManager.Instance;
+                if (dm == null) return;
+                var musicInfo = dm.GetMusic(011879);
+                if (musicInfo == null) return;
+
+                var instance = NotesListManager.Instance;
+                if (instance == null) return;
+                var notesList = instance.GetNotesList();
+                if (notesList != null && notesList.ContainsKey(011879))
+                {
+                    notesList.Remove(011879);
+                    MelonLogger.Msg($"Hide glitch Xaleid◆scopiX in normal mode");
+                }
+            }
+            catch (Exception ex)
+            {
+                MelonLogger.Error($"Hide glitch Xaleid◆scopiX Error: {ex}");
+            }
+        }
+
+
+
+
+
+
+
+
 
         // 模拟最后Boss钥匙刷卡功能
         [HarmonyPostfix]
